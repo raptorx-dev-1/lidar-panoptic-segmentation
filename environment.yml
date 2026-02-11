@@ -1,0 +1,140 @@
+# =============================================================================
+# LiDAR Panoptic Segmentation - Conda Environment
+# =============================================================================
+# Environment for local development without Docker.
+#
+# Installation:
+#   conda env create -f environment.yml
+#   conda activate lidar-panoptic-segmentation
+#
+# For GPU support, ensure CUDA drivers are installed on your system.
+# MinkowskiEngine requires additional build steps after conda install.
+# =============================================================================
+
+name: lidar-panoptic-segmentation
+
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Python
+  - python=3.10
+
+  # PyTorch with CUDA
+  - pytorch=2.1.0
+  - torchvision=0.16.0
+  - pytorch-cuda=12.1
+
+  # Core scientific computing
+  - numpy>=1.21,<2.0
+  - scipy>=1.7
+  - pandas>=1.4
+  - scikit-learn>=1.0
+
+  # Point cloud and geospatial
+  - laspy>=2.4
+  - shapely>=2.0
+  - geopandas>=0.12
+  - pyproj>=3.4
+
+  # Deep learning utilities
+  - tensorboard>=2.10
+
+  # Visualization
+  - matplotlib>=3.5
+  - seaborn>=0.12
+
+  # Development tools
+  - jupyter>=1.0
+  - jupyterlab>=3.4
+  - ipywidgets>=8.0
+  - tqdm>=4.64
+
+  # Testing
+  - pytest>=7.0
+  - pytest-cov>=3.0
+  - pytest-timeout>=2.1
+
+  # Code quality
+  - black>=22.0
+  - isort>=5.10
+  - flake8>=5.0
+  - mypy>=0.990
+
+  # Build tools
+  - ninja>=1.11
+  - cmake>=3.22
+  - make
+
+  # C++ compilation (for MinkowskiEngine)
+  - gxx_linux-64>=11.0
+  - openblas>=0.3
+
+  # pip for additional packages
+  - pip>=22.0
+
+  # Pip-only packages
+  - pip:
+      # Configuration and validation
+      - pydantic>=2.0
+      - pyyaml>=6.0
+
+      # MLflow and experiment tracking
+      - mlflow>=2.5
+      - wandb>=0.15
+
+      # Point cloud processing
+      - plyfile>=0.8
+      - open3d>=0.17
+      - hdbscan>=0.8.29
+
+      # Geometry and polygon
+      - alphashape>=1.3
+
+      # Arrow/Parquet
+      - pyarrow>=12.0
+
+      # Azure and cloud storage
+      - azure-storage-blob>=12.14
+      - azure-identity>=1.12
+
+      # Databricks and Unity Catalog
+      - databricks-sdk>=0.12
+      - databricks-connect>=14.0
+
+      # Additional utilities
+      - colorlog>=6.7
+      - humanize>=4.4
+      - python-dotenv>=1.0
+
+# =============================================================================
+# Post-Installation Notes
+# =============================================================================
+# 1. MinkowskiEngine must be installed separately from source:
+#
+#    # Activate environment
+#    conda activate lidar-panoptic-segmentation
+#
+#    # Set CUDA paths
+#    export CUDA_HOME=/usr/local/cuda
+#    export PATH=$CUDA_HOME/bin:$PATH
+#
+#    # Clone and install MinkowskiEngine
+#    git clone https://github.com/NVIDIA/MinkowskiEngine.git
+#    cd MinkowskiEngine
+#    pip install --no-build-isolation .
+#
+# 2. For CPU-only development (no CUDA):
+#    Replace pytorch-cuda with cpuonly:
+#    - cpuonly
+#
+#    And install MinkowskiEngine with CPU_ONLY=1:
+#    CPU_ONLY=1 pip install --no-build-isolation .
+#
+# 3. Verify installation:
+#    python -c "import MinkowskiEngine as ME; ME.print_diagnostics()"
+#
+# =============================================================================

@@ -1,0 +1,43 @@
+# Sample configuration for testing with synthetic data
+env:
+  name: local
+  debug: true
+  seed: 42
+
+paths:
+  data_root: /home/hagerty7/Documents/repos/SegmentAnyTree/data/sample
+  train:
+    pointclouds: /home/hagerty7/Documents/repos/SegmentAnyTree/data/sample/train/las
+  val:
+    pointclouds: /home/hagerty7/Documents/repos/SegmentAnyTree/data/sample/val/las
+  test:
+    pointclouds: /home/hagerty7/Documents/repos/SegmentAnyTree/data/sample/test/las
+  models: /home/hagerty7/Documents/repos/SegmentAnyTree/data/sample/models
+  logs: /home/hagerty7/Documents/repos/SegmentAnyTree/data/sample/logs
+
+training:
+  model_name: PointGroup3heads
+  num_classes: 2
+  embed_dim: 5
+  epochs: 5
+  batch_size: 2
+  learning_rate: 0.001
+  voxel_size: 0.1
+  mixed_precision: false
+  checkpoint_frequency: 1
+
+inference:
+  min_points_per_instance: 20
+  confidence_threshold: 0.5
+
+postprocess:
+  clustering_method: hdbscan
+  hdbscan_min_cluster_size: 20
+  min_height: 1.0
+
+logging:
+  level: DEBUG
+  mlflow:
+    enabled: false
+  wandb:
+    enabled: false

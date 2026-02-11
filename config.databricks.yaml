@@ -1,0 +1,174 @@
+# =============================================================================
+# LiDAR Panoptic Segmentation - Databricks Configuration
+# =============================================================================
+# Example configuration for Azure Databricks with Unity Catalog
+# Copy this file and modify paths for your environment
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Environment Settings
+# -----------------------------------------------------------------------------
+env:
+  name: databricks
+  debug: false
+  seed: 42
+  num_workers: 0  # Use 0 for Databricks to avoid multiprocessing issues
+  cuda_visible_devices: null
+
+# -----------------------------------------------------------------------------
+# Unity Catalog Paths
+# -----------------------------------------------------------------------------
+# Replace with your actual catalog, schema, and volume names:
+#   - catalog: your Unity Catalog name (e.g., 'forestry_catalog')
+#   - schema: your schema name (e.g., 'lidar_data')
+#   - volume: your volume name (e.g., 'raw_data', 'models', etc.)
+# -----------------------------------------------------------------------------
+paths:
+  # Option 1: Unity Catalog Volumes (recommended)
+  data_root: /Volumes/forestry_catalog/lidar_schema/raw_data
+
+  # Option 2: Azure Blob Storage via abfss://
+  # data_root: abfss://lidar-data@yourstorageaccount.dfs.core.windows.net/
+
+  train:
+    pointclouds: ${paths.data_root}/train/las
+    labels: ${paths.data_root}/train/labels
+
+  val:
+    pointclouds: ${paths.data_root}/val/las
+    labels: ${paths.data_root}/val/labels
+
+  test:
+    pointclouds: ${paths.data_root}/test/las
+    labels: ${paths.data_root}/test/labels
+
+  inference:
+    input: /Volumes/forestry_catalog/lidar_schema/inference/input
+    output: /Volumes/forestry_catalog/lidar_schema/inference/output
+
+  models: /Volumes/forestry_catalog/lidar_schema/models
+  logs: /Volumes/forestry_catalog/lidar_schema/logs
+  cache: /local_disk0/cache  # Use local SSD for caching
+
+# -----------------------------------------------------------------------------
+# Dependency Configuration for Databricks
+# -----------------------------------------------------------------------------
+dependencies:
+  torch_version: "2.1.0+cu121"  # Matches DBR 15.4 LTS GPU
+  cuda_version: "12.1"
+
+  minkowski_engine:
+    enabled: true
+    install_method: notebook  # Run install script in first notebook cell
+    script_path: ./scripts/install_minkowski.sh
+    build_wheel: true
+    wheel_output: /local_disk0/minkowski/MinkowskiEngine.whl
+    env:
+      ME_REPO: https://github.com/NVIDIA/MinkowskiEngine.git
+      ME_REF: master
+      # Uncomment for private Azure DevOps repo:
+      # ME_REPO: https://dev.azure.com/your-org/your-project/_git/MinkowskiEngine
+      # ADO_PAT_SECRET_SCOPE: azure-keyvault
+      # ADO_PAT_SECRET_KEY: ado-pat
+
+# -----------------------------------------------------------------------------
+# Training Configuration
+# -----------------------------------------------------------------------------
+training:
+  model_name: PointGroup3heads
+  backbone: MinkUNet34C
+  num_classes: 2
+  embed_dim: 5
+
+  lr: 0.0001
+  batch_size: 4  # Adjust based on GPU memory
+  epochs: 60
+  scheduler: cosine
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+
+  loss: panoptic_loss
+  voxel_size: 0.02
+  sample_radius: 8.0
+  mixed_precision: true
+
+  checkpoint_frequency: 5
+  eval_frequency: 1
+  resume_from: null
+
+  augmentations:
+    rotate: true
+    rotate_range: 180.0
+    jitter: true
+    jitter_std: 0.01
+    scale: false
+    scale_range: [0.9, 1.1]
+    flip: true
+    elastic_distortion: false
+    color_jitter: false
+    dropout: 0.0
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  method: native  # Use 'docker' if MinkowskiEngine not installed
+  pretrained_model: /Volumes/forestry_catalog/lidar_schema/models/PointGroup-PAPER.pt
+  docker_image: maciekwielgosz/segment-any-tree:latest
+
+  model_uri: models:/LidarPanopticSegmentation/Production
+
+  min_points_per_instance: 50
+  confidence_threshold: 0.5
+  polygon_output_format: geojson
+  save_point_clouds: true
+  save_polygons: true
+
+  batch_size: 1
+  overlap: 0.5
+  tile_size: 50.0
+  merge_instances: true
+
+# -----------------------------------------------------------------------------
+# Postprocessing Configuration
+# -----------------------------------------------------------------------------
+postprocess:
+  clustering_method: hdbscan
+  hdbscan_min_cluster_size: 50
+  hdbscan_min_samples: 10
+  meanshift_bandwidth: null
+
+  polygon:
+    method: convex_hull
+    alpha: 0.5
+    min_area: 1.0
+    simplify_tolerance: 0.1
+    buffer_distance: 0.0
+
+  filter_by_height: true
+  min_height: 2.0
+  max_height: 100.0
+
+# -----------------------------------------------------------------------------
+# Logging - MLflow (Databricks native)
+# -----------------------------------------------------------------------------
+logging:
+  level: INFO
+  log_to_file: false  # Use MLflow instead
+  log_frequency: 100
+
+  mlflow:
+    enabled: true
+    tracking_uri: databricks
+    experiment_name: /Users/${user.email}/LidarPanopticSegmentation
+    run_name: null
+    registry_uri: databricks-uc  # Unity Catalog model registry
+    log_artifacts: true
+    log_models: true
+
+  wandb:
+    enabled: false
+    project: null
+    entity: null
+    name: null
+    tags: []

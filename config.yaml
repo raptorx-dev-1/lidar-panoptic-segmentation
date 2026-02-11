@@ -1,0 +1,185 @@
+# =============================================================================
+# LiDAR Panoptic Segmentation Configuration
+# =============================================================================
+# Unified configuration file that drives all runtime behavior across
+# environments and components. Supports Unity Catalog paths and local development.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Environment Settings
+# -----------------------------------------------------------------------------
+env:
+  name: local  # local | dev | databricks
+  debug: false
+  seed: 42
+  num_workers: 4
+  cuda_visible_devices: null  # e.g., "0,1" to limit GPUs
+
+# -----------------------------------------------------------------------------
+# Data and Output Paths
+# -----------------------------------------------------------------------------
+# Supports:
+#   - Unity Catalog: abfss://container@account.dfs.core.windows.net/path
+#   - Local paths: ./data or /absolute/path
+#   - Legacy DBFS (deprecated): dbfs:/mnt/path
+# -----------------------------------------------------------------------------
+paths:
+  data_root: ./data  # For Unity Catalog: abfss://forest-data@youraccount.dfs.core.windows.net/
+
+  train:
+    pointclouds: ${paths.data_root}/train/las
+    labels: ${paths.data_root}/train/labels
+
+  val:
+    pointclouds: ${paths.data_root}/val/las
+    labels: ${paths.data_root}/val/labels
+
+  test:
+    pointclouds: ${paths.data_root}/test/las
+    labels: ${paths.data_root}/test/labels
+
+  inference:
+    input: ${paths.data_root}/inference/lidar
+    output: ${paths.data_root}/inference/predictions
+
+  models: ./models  # For Databricks: /Volumes/catalog/schema/models
+  logs: ./logs
+  cache: ./cache
+
+# -----------------------------------------------------------------------------
+# Dependency Configuration
+# -----------------------------------------------------------------------------
+dependencies:
+  torch_version: "2.1.0+cu121"
+  cuda_version: "12.1"
+
+  minkowski_engine:
+    enabled: true
+    install_method: notebook  # notebook | wheel | conda | skip
+    script_path: ./scripts/install_minkowski.sh
+    build_wheel: false
+    wheel_output: null  # e.g., /local_disk0/minkowski/minkowski.whl
+    env:
+      ME_REPO: https://github.com/NVIDIA/MinkowskiEngine.git
+      ME_REF: master
+      # For Azure DevOps private repo:
+      # ME_REPO: https://dev.azure.com/org/project/_git/MinkowskiEngine
+      # ADO_PAT_SECRET_SCOPE: azure
+      # ADO_PAT_SECRET_KEY: ado_pat
+
+# -----------------------------------------------------------------------------
+# Training Configuration
+# -----------------------------------------------------------------------------
+training:
+  model_name: PointGroup3heads  # MinkUNet | PointGroup | PointGroup3heads | KPConv | PointNet2
+  backbone: MinkUNet34C
+  num_classes: 2  # non-tree, tree
+  embed_dim: 5
+
+  # Optimization
+  lr: 0.0001
+  batch_size: 8
+  epochs: 60
+  scheduler: cosine  # cosine | exponential | step | multi_step | cyclic | reduce_on_plateau
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+
+  # Loss function
+  loss: panoptic_loss  # panoptic_loss | cross_entropy | focal_loss | dice_loss
+
+  # Data handling
+  voxel_size: 0.02
+  sample_radius: 8.0
+  mixed_precision: true
+
+  # Checkpointing
+  checkpoint_frequency: 5
+  eval_frequency: 1
+  resume_from: null
+
+  # Data augmentation
+  augmentations:
+    rotate: true
+    rotate_range: 180.0
+    jitter: true
+    jitter_std: 0.01
+    scale: false
+    scale_range: [0.9, 1.1]
+    flip: true
+    elastic_distortion: false
+    color_jitter: false
+    dropout: 0.0
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  # Pretrained model settings
+  method: auto  # auto | docker | native
+  pretrained_model: model_file/PointGroup-PAPER.pt
+  docker_image: maciekwielgosz/segment-any-tree:latest
+
+  # MLflow model (for custom trained models)
+  model_uri: models:/LidarPanopticSegmentation/latest  # MLflow model URI
+
+  # Instance detection settings
+  min_points_per_instance: 50
+  confidence_threshold: 0.5
+
+  # Output settings
+  polygon_output_format: geojson  # geojson | shapefile | parquet
+  save_point_clouds: true
+  save_polygons: true
+
+  # Tiling for large point clouds
+  batch_size: 1
+  overlap: 0.5
+  tile_size: 50.0
+  merge_instances: true
+
+# -----------------------------------------------------------------------------
+# Postprocessing Configuration
+# -----------------------------------------------------------------------------
+postprocess:
+  # Instance clustering
+  clustering_method: hdbscan  # hdbscan | meanshift | dbscan
+  hdbscan_min_cluster_size: 50
+  hdbscan_min_samples: 10
+  meanshift_bandwidth: null  # auto if null
+
+  # Polygon extraction
+  polygon:
+    method: convex_hull  # convex_hull | alphashape | concave_hull
+    alpha: 0.5
+    min_area: 1.0  # square meters
+    simplify_tolerance: 0.1
+    buffer_distance: 0.0
+
+  # Height filtering
+  filter_by_height: true
+  min_height: 2.0  # meters
+  max_height: 100.0  # meters
+
+# -----------------------------------------------------------------------------
+# Logging and Experiment Tracking
+# -----------------------------------------------------------------------------
+logging:
+  level: INFO  # DEBUG | INFO | WARNING | ERROR
+  log_to_file: true
+  log_frequency: 100  # Log every N iterations
+
+  mlflow:
+    enabled: true
+    tracking_uri: databricks  # databricks | file:///path/to/mlruns
+    experiment_name: LidarPanopticSegmentation_Experiments
+    run_name: null  # auto-generated if null
+    registry_uri: null
+    log_artifacts: true
+    log_models: true
+
+  wandb:
+    enabled: false
+    project: lidar-panoptic-segmentation
+    entity: null
+    name: null
+    tags: []
