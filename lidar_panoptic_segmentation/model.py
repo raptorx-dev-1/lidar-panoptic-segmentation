@@ -637,7 +637,7 @@ class LidarPanopticModel(BasePanopticModel):
         return var_loss + dist_loss
 
 
-def create_model(config: Config, device: Optional[str] = None) -> LidarPanopticModel:
+def create_model(config: Config, device: Optional[str] = None) -> BasePanopticModel:
     """
     Create a panoptic segmentation model from configuration.
 
@@ -651,15 +651,40 @@ def create_model(config: Config, device: Optional[str] = None) -> LidarPanopticM
     if device is None:
         device = config.get_effective_device()
 
-    model = LidarPanopticModel(
-        num_classes=config.training.num_classes,
-        embed_dim=config.training.embed_dim,
-        in_channels=4,  # xyz + intensity
-        backbone_channels=128,
-        backbone_config=config.training.backbone,
-        use_offset_head=True,
-        use_embedding_head=True,
-    )
+    architecture = config.training.model_name
+
+    if architecture == ModelArchitecture.SPFORMER_3D:
+        from lidar_panoptic_segmentation.mask_transformer import SPFormer3D
+
+        tc = config.training.transformer
+        model = SPFormer3D(
+            num_classes=config.training.num_classes,
+            in_channels=4,
+            backbone_channels=tc.backbone_channels,
+            feature_dim=tc.feature_dim,
+            transformer_dim=tc.d_model,
+            num_heads=tc.nhead,
+            num_decoder_layers=tc.num_decoder_layers,
+            num_queries=tc.num_queries,
+            dim_feedforward=tc.dim_feedforward,
+            superpoint_voxel_size=tc.superpoint_voxel_size,
+            confidence_threshold=tc.confidence_threshold,
+            mask_threshold=tc.mask_threshold,
+            weight_ce=tc.weight_ce,
+            weight_mask=tc.weight_mask,
+            weight_dice=tc.weight_dice,
+            weight_aux_semantic=tc.weight_aux_semantic,
+        )
+    else:
+        model = LidarPanopticModel(
+            num_classes=config.training.num_classes,
+            embed_dim=config.training.embed_dim,
+            in_channels=4,  # xyz + intensity
+            backbone_channels=128,
+            backbone_config=config.training.backbone,
+            use_offset_head=True,
+            use_embedding_head=True,
+        )
 
     model = model.to(device)
 

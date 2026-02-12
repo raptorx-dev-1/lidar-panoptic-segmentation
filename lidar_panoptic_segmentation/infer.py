@@ -193,6 +193,7 @@ class InferencePipeline:
         semantic_pred = output.semantic_pred.cpu().numpy()
         embeddings = output.embedding.cpu().numpy() if output.embedding is not None else None
         offset_pred = output.offset_pred.cpu().numpy() if output.offset_pred is not None else None
+        instance_pred = output.instance_pred.cpu().numpy() if output.instance_pred is not None else None
 
         # Postprocess
         result = postprocess_predictions(
@@ -200,6 +201,7 @@ class InferencePipeline:
             semantic_pred=semantic_pred,
             embeddings=embeddings,
             offset_pred=offset_pred,
+            instance_pred=instance_pred,
             config=self.config,
         )
 

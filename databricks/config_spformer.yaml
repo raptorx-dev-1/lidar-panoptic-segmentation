@@ -1,0 +1,70 @@
+env:
+  name: databricks
+  debug: false
+  seed: 42
+  num_workers: 0
+
+paths:
+  data_root: "/Volumes/__CATALOG__/__SCHEMA__/raw_data"
+  train:
+    pointclouds: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/train/las"
+    labels: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/train/labels"
+  val:
+    pointclouds: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/val/las"
+    labels: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/val/labels"
+  inference:
+    input: "/Volumes/__CATALOG__/__SCHEMA__/vizionair_lidar/input"
+    output: "/Volumes/__CATALOG__/__SCHEMA__/vizionair_lidar/output_polygons_spformer"
+  models: "/Volumes/__CATALOG__/__SCHEMA__/models"
+  logs: "/Volumes/__CATALOG__/__SCHEMA__/logs"
+  cache: "/local_disk0/cache"
+
+training:
+  model_name: SPFormer3D
+  batch_size: 2
+  epochs: 120
+  lr: 0.0001
+  weight_decay: 0.01
+  gradient_clip: 0.1
+  mixed_precision: true
+  scheduler: cosine
+  augmentations:
+    rotate: true
+    rotate_range: 180.0
+    jitter: true
+    jitter_std: 0.01
+    scale: true
+    scale_range: [0.9, 1.1]
+    flip: true
+    elastic_distortion: true
+    color_jitter: false
+    dropout: 0.0
+  transformer:
+    d_model: 256
+    nhead: 8
+    num_decoder_layers: 6
+    num_queries: 100
+    dim_feedforward: 1024
+    superpoint_voxel_size: 0.1
+    feature_dim: 64
+    backbone_channels: [64, 128, 256, 512]
+    confidence_threshold: 0.5
+    mask_threshold: 0.5
+    weight_ce: 2.0
+    weight_mask: 5.0
+    weight_dice: 5.0
+    weight_aux_semantic: 1.0
+
+inference:
+  model_uri: "models:/__MODEL_NAME__/Production"
+
+logging:
+  level: INFO
+  mlflow:
+    enabled: true
+    tracking_uri: databricks
+    experiment_name: LidarPanopticSegmentation_SPFormer3D
+    registry_uri: databricks-uc
+  wandb:
+    enabled: false
+  log_to_file: false

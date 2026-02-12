@@ -66,6 +66,7 @@ class ModelArchitecture(str, Enum):
     MINK_UNET = "MinkUNet"
     POINT_GROUP = "PointGroup"
     POINT_GROUP_3HEADS = "PointGroup3heads"
+    SPFORMER_3D = "SPFormer3D"
     KPCONV = "KPConv"
     POINTNET2 = "PointNet2"
 
@@ -293,6 +294,32 @@ class AugmentationConfig(BaseModel):
 
 
 # ==============================================================================
+# Transformer Configuration
+# ==============================================================================
+
+class TransformerConfig(BaseModel):
+    """Configuration for SPFormer3D mask transformer architecture."""
+
+    d_model: int = Field(default=256, ge=1, description="Transformer hidden dimension")
+    nhead: int = Field(default=8, ge=1, description="Number of attention heads")
+    num_decoder_layers: int = Field(default=6, ge=1, description="Number of transformer decoder layers")
+    num_queries: int = Field(default=100, ge=1, description="Number of learnable instance queries")
+    dim_feedforward: int = Field(default=1024, ge=1, description="FFN intermediate dimension")
+    superpoint_voxel_size: float = Field(default=0.1, gt=0, description="Voxel size for superpoint pooling")
+    feature_dim: int = Field(default=64, ge=1, description="Backbone output feature dimension")
+    backbone_channels: List[int] = Field(
+        default=[64, 128, 256, 512],
+        description="Channel sizes for each encoder stage"
+    )
+    confidence_threshold: float = Field(default=0.5, ge=0, le=1, description="Confidence threshold for inference")
+    mask_threshold: float = Field(default=0.5, ge=0, le=1, description="Mask binarization threshold")
+    weight_ce: float = Field(default=2.0, ge=0, description="Weight for classification CE loss")
+    weight_mask: float = Field(default=5.0, ge=0, description="Weight for mask focal loss")
+    weight_dice: float = Field(default=5.0, ge=0, description="Weight for mask dice loss")
+    weight_aux_semantic: float = Field(default=1.0, ge=0, description="Weight for auxiliary semantic loss")
+
+
+# ==============================================================================
 # Training Configuration
 # ==============================================================================
 
@@ -382,6 +409,10 @@ class TrainingConfig(BaseModel):
     mixed_precision: bool = Field(
         default=True,
         description="Enable automatic mixed precision training"
+    )
+    transformer: TransformerConfig = Field(
+        default_factory=TransformerConfig,
+        description="SPFormer3D transformer architecture settings"
     )
 
 

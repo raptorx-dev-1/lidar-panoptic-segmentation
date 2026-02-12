@@ -663,6 +663,7 @@ def postprocess_predictions(
     semantic_pred: np.ndarray,
     embeddings: Optional[np.ndarray] = None,
     offset_pred: Optional[np.ndarray] = None,
+    instance_pred: Optional[np.ndarray] = None,
     config: Optional[Config] = None,
 ) -> PanopticResult:
     """
@@ -673,6 +674,7 @@ def postprocess_predictions(
         semantic_pred: (N,) semantic predictions
         embeddings: (N, D) instance embeddings
         offset_pred: (N, 3) offset predictions
+        instance_pred: (N,) pre-computed instance IDs (skips clustering if provided)
         config: Full configuration
 
     Returns:
@@ -684,14 +686,15 @@ def postprocess_predictions(
 
     postprocess_config = config.postprocess
 
-    # Cluster instances
-    instance_pred = cluster_instances(
-        points=points,
-        semantic_pred=semantic_pred,
-        embeddings=embeddings,
-        offset_pred=offset_pred,
-        config=postprocess_config,
-    )
+    # Use pre-computed instances if provided, otherwise cluster
+    if instance_pred is None:
+        instance_pred = cluster_instances(
+            points=points,
+            semantic_pred=semantic_pred,
+            embeddings=embeddings,
+            offset_pred=offset_pred,
+            config=postprocess_config,
+        )
 
     # Extract instances
     instances = extract_instances(

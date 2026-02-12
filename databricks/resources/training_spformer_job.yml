@@ -1,0 +1,28 @@
+resources:
+  jobs:
+    training_spformer_job:
+      name: "[${bundle.target}] LiDAR Panoptic - SPFormer3D Training"
+      tasks:
+        - task_key: train_spformer_model
+          spark_python_task:
+            python_file: databricks/src/run_training.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
+              - "--model-name"
+              - "${var.model_name}"
+              - "--config"
+              - "databricks/config_spformer.yaml"
+          libraries:
+            - whl: ../dist/*.whl
+          new_cluster:
+            spark_version: "15.4.x-gpu-ml-scala2.12"
+            node_type_id: Standard_NC24ads_A100_v4
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: "local[*]"
+            custom_tags:
+              ResourceClass: SingleNode
