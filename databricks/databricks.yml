@@ -1,0 +1,36 @@
+bundle:
+  name: lidar-panoptic-segmentation
+
+variables:
+  catalog:
+    description: Unity Catalog name
+  schema:
+    description: UC schema name
+  model_name:
+    description: Registered model name in UC
+    default: LidarPanopticSegmentation
+
+artifacts:
+  lidar_wheel:
+    type: whl
+    path: ..
+    build: pip wheel --no-deps -w dist .
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog: dev_lidar
+      schema: panoptic_segmentation
+
+  prod:
+    mode: production
+    variables:
+      catalog: prod_lidar
+      schema: panoptic_segmentation
+    run_as:
+      service_principal_name: lidar-panoptic-sp

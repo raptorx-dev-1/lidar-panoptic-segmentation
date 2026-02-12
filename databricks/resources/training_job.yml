@@ -1,0 +1,26 @@
+resources:
+  jobs:
+    training_job:
+      name: "[${bundle.target}] LiDAR Panoptic - Training"
+      tasks:
+        - task_key: train_model
+          spark_python_task:
+            python_file: databricks/src/run_training.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
+              - "--model-name"
+              - "${var.model_name}"
+          libraries:
+            - whl: ../dist/*.whl
+          new_cluster:
+            spark_version: "15.4.x-gpu-ml-scala2.12"
+            node_type_id: Standard_NC6s_v3
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: "local[*]"
+            custom_tags:
+              ResourceClass: SingleNode

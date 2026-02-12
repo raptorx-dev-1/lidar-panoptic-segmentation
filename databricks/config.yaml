@@ -1,0 +1,38 @@
+env:
+  name: databricks
+  debug: false
+  seed: 42
+  num_workers: 0
+
+paths:
+  data_root: "/Volumes/__CATALOG__/__SCHEMA__/raw_data"
+  train:
+    pointclouds: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/train/las"
+    labels: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/train/labels"
+  val:
+    pointclouds: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/val/las"
+    labels: "/Volumes/__CATALOG__/__SCHEMA__/raw_data/val/labels"
+  inference:
+    input: "/Volumes/__CATALOG__/__SCHEMA__/vizionair_lidar/input"
+    output: "/Volumes/__CATALOG__/__SCHEMA__/vizionair_lidar/output_polygons"
+  models: "/Volumes/__CATALOG__/__SCHEMA__/models"
+  logs: "/Volumes/__CATALOG__/__SCHEMA__/logs"
+  cache: "/local_disk0/cache"
+
+training:
+  batch_size: 4
+  mixed_precision: true
+
+inference:
+  model_uri: "models:/__MODEL_NAME__/Production"
+
+logging:
+  level: INFO
+  mlflow:
+    enabled: true
+    tracking_uri: databricks
+    experiment_name: LidarPanopticSegmentation_Experiments
+    registry_uri: databricks-uc
+  wandb:
+    enabled: false
+  log_to_file: false
